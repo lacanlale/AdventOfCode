@@ -16,6 +16,7 @@ def sep_input(timestamps):
         DATE : datetime.date
         TIME : datetime.time
         STATUS : string
+    IN ORDER BY DATE
     '''
     data = {
         'DATE' : [],
@@ -37,28 +38,80 @@ def sep_input(timestamps):
         data['DATE'].append(date(year,month,day))
         data['TIME'].append(time(hour, minute))
         data['STATUS'].append(unfrmt_status)
-    df = pd.DataFrame(data=data)
+        
+    df = pd.DataFrame(data=data).sort_values('DATE')
     return df
+
+
+def find_sleeptimes(df):
+    '''
+    Returns sleep times of each guard
+    PARAMETERS
+    ----------
+    df : pandas.DataFrame
+    RETURNS
+    -------
+    sleep_times = dict(guard# : total)
+    sorted in ascending order of least to greatest
+    '''
+    current = 0
+    prev = 0
+    sleep_times = {}
+    for row in df.itertuples():
+        time_stamp = row.TIME
+        status = row.STATUS
+        if 'Guard' in status:
+            temp = status[status.index("#"):]
+            guard_num = temp[1:temp.index(' ')-1]
+            sleep_times[guard_num] = 0
+        elif 'falls' in status:
+            prev = current
+            current = time_stamp.minute
+        else:
+            prev = current
+            current = time_stamp.minute
+            sleep_times[guard_num] += abs(current - prev)
+
+    return sorted(sleep_times.items(), key=lambda x: x[1])
 
 
 with open('../input/day4_input.txt', 'r') as file_input:
     time_input = [time for time in file_input]
 
 log.basicConfig(level=log.DEBUG)
-guard_stamp = {}
-guard_num = 0
-current = 0
-prev = 0
-for stamp in time_input:
-    break
-    if '00:' in stamp:
-        if 'Guard' in stamp:
-            temp = stamp.index("#")
-            guard_num = stamp[temp[1:temp.index(' ')].trim()]
-        elif 'falls' in stamp:
-            prev = current
-            current = int(stamp[stamp.index(':'):stamp.index(']')])
+time_input = sep_input(time_input)
+sleep_times = find_sleeptimes(time_input)
+
+sleepiest = sleep_times[-1]
+guard_id = sleepiest[0]
+guard_sleep_time = sleepiest[1]
+sleep_min = {min: 0 for min in range(0,60)}
+count_min = False
+asleep = False
+min_asleep = 0
+min_awake = 0
+
+for row in time_input.itertuples():
+    time_stamp = row.TIME
+    status = row.STATUS
+    if '#' in status:
+        count_min = str(guard_id) in status
+    asleep = 'falls' in status
+    if count_min and asleep:
+        min_asleep = time_stamp.minute
+    elif 'wakes' in status:
+        min_awake = time_stamp.minute
+        if(min_awake > min_asleep):
+            for min in range(min_asleep, min_awake):
+                sleep_min[min] += 1
         else:
-            prev = current
-            current = int(stamp[stamp.index(':'):stamp.index(']')])-1
-            guard_stamp[guard_num] += current - prev
+            for min in range(min_asleep, 60):
+                sleep_min[min] += 1
+            for min in range(0, min_awake):
+                sleep_min[min] += 1
+
+sleep_min = sorted(sleep_min.items(), key=lambda x: x[1])
+common_min = sleep_min[-1][0]
+print(f'Guard #{guard_id} slept for a total of {guard_sleep_time} minutes, sleeping the most on minute {common_min}.')
+ans = int(guard_id) * common_min
+print(f'Answer: {ans}')

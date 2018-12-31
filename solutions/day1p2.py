@@ -16,6 +16,6 @@ while not repeated:
         if calc_freq in freqs_overtime:
             print("First duplicate frequency: ", calc_freq)
             repeated = False
-            break
+            exit()
         freqs_overtime.append(calc_freq)
     loop += 1
