@@ -56,21 +56,24 @@ def find_sleeptimes(df):
     '''
     current = 0
     prev = 0
+    not_repeated = True
     sleep_times = {}
     for row in df.itertuples():
         time_stamp = row.TIME
         status = row.STATUS
         if 'Guard' in status:
             temp = status[status.index("#"):]
-            guard_num = temp[1:temp.index(' ')-1]
-            sleep_times[guard_num] = 0
-        elif 'falls' in status:
+            guard_num = temp[1:temp.index(' ')]
+            not_repeated = True
+        elif not_repeated and 'falls' in status:
             prev = current
             current = time_stamp.minute
-        else:
+            not_repeated = False
+        elif 'wakes' in status:
+            not_repeated = True
             prev = current
             current = time_stamp.minute
-            sleep_times[guard_num] += abs(current - prev)
+            sleep_times[guard_num] = abs(current - prev) + sleep_times[guard_num] if guard_num in sleep_times else abs(current - prev)
 
     return sorted(sleep_times.items(), key=lambda x: x[1])
 
@@ -80,7 +83,9 @@ with open('../input/day4_input.txt', 'r') as file_input:
 
 log.basicConfig(level=log.DEBUG)
 time_input = sep_input(time_input)
+log.debug(time_input)
 sleep_times = find_sleeptimes(time_input)
+log.debug(sleep_times)
 
 sleepiest = sleep_times[-1]
 guard_id = sleepiest[0]
