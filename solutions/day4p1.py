@@ -16,7 +16,7 @@ def sep_input(timestamps):
         DATE : datetime.date
         TIME : datetime.time
         STATUS : string
-    IN ORDER BY DATE
+    IN ORDER BY DATE AND TIME
     '''
     data = {
         'DATE' : [],
@@ -39,7 +39,7 @@ def sep_input(timestamps):
         data['TIME'].append(time(hour, minute))
         data['STATUS'].append(unfrmt_status)
         
-    df = pd.DataFrame(data=data).sort_values('DATE')
+    df = pd.DataFrame(data=data).sort_values(['DATE', 'TIME'])
     return df
 
 
@@ -83,9 +83,8 @@ with open('../input/day4_input.txt', 'r') as file_input:
 
 log.basicConfig(level=log.DEBUG)
 time_input = sep_input(time_input)
-log.debug(time_input)
 sleep_times = find_sleeptimes(time_input)
-log.debug(sleep_times)
+print(time_input)
 
 sleepiest = sleep_times[-1]
 guard_id = sleepiest[0]
@@ -101,19 +100,20 @@ for row in time_input.itertuples():
     status = row.STATUS
     if '#' in status:
         count_min = str(guard_id) in status
-    asleep = 'falls' in status
-    if count_min and asleep:
-        min_asleep = time_stamp.minute
-    elif 'wakes' in status:
-        min_awake = time_stamp.minute
-        if(min_awake > min_asleep):
-            for min in range(min_asleep, min_awake):
-                sleep_min[min] += 1
-        else:
-            for min in range(min_asleep, 60):
-                sleep_min[min] += 1
-            for min in range(0, min_awake):
-                sleep_min[min] += 1
+    if count_min:
+        if 'falls' in status:
+            min_asleep = time_stamp.minute
+        elif 'wakes' in status:
+            min_awake = time_stamp.minute
+            if(min_awake > min_asleep):
+                for min in range(min_asleep, min_awake):
+                    sleep_min[min] += 1
+            else:
+                log.debug("over")
+                for min in range(min_asleep, 60):
+                    sleep_min[min] += 1
+                for min in range(0, min_awake):
+                    sleep_min[min] += 1
 
 sleep_min = sorted(sleep_min.items(), key=lambda x: x[1])
 common_min = sleep_min[-1][0]
